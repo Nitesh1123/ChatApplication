@@ -1,0 +1,54 @@
+const route = require('express').Router();
+const authMiddleware = require('./../middlewares/authMiddleware');
+const Chat = require('./../models/chat');
+const Message = require('./../models/message');
+
+route.post('/new-message', authMiddleware, async(req,res) => {
+    try{
+        // Store the message in message collection
+        const newMessage = new Message(req.body);
+        const savedMessage = await newMessage.save();
+        // update the last message in chat collection
+        // const currentChat = await Chat.findById(req.body.chatId);
+        // currentChat.lastMessage = savedMessage._id;
+        // await currentChat.save();
+        const currentChat = await Chat.findOneAndUpdate({
+            _id : req.body.chatId
+        }, {
+            lastMessage: savedMessage._id,
+            $inc : {unreadMessageCount: 1}
+        });
+
+        res.status(201).send({
+            message: 'Message sent successfully',
+            success: true,
+            data: savedMessage
+        })
+
+    }catch(err){
+        res.status(400).send({
+            message : err.message,
+            success : false
+        });
+    }
+});
+
+route.get('/get-all-messages/:chatId', authMiddleware, async(req,res) => {
+    try{
+        const allMessages = await Message.find({chatId: req.params.chatId}).sort({createdAt: 1});
+
+        res.send({
+            message:'Message Sent Successfully',
+            status: true,
+            data : allMessages
+        })
+
+    } catch(error){
+        res.status(400).send({
+            message: error.message,
+            status: false
+        });
+    }
+})
+
+module.exports = route;
