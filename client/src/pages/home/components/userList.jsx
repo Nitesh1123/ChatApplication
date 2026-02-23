@@ -1,8 +1,9 @@
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { createNewChat } from "../../../apiCalls/chat";
 import { hideLoader, showLoader } from "../../../redux/loaderSlice";
 import { setAllChats, setSelectedChat } from "../../../redux/userSlice";
+import moment from "moment";
 
 function UserList({ searchkey }) {
     const { allUsers, allChats, user: currentUser, selectedChat } = useSelector(
@@ -32,18 +33,27 @@ function UserList({ searchkey }) {
     };
 
     const openChat = (selectedUserId) => {
+        console.log('Opening chat for user:', selectedUserId);
+        console.log('Available chats:', allChats);
+        console.log('Current user:', currentUser._id);
+        
         const chat = allChats.find(chat => {
             const memberIds = (chat?.members || []).map(m =>
                 typeof m === "string" ? m : m?._id
             );
+            console.log('Chat member IDs:', memberIds);
             return (
                 memberIds.includes(currentUser._id) &&
                 memberIds.includes(selectedUserId)
             );
         });
 
+        console.log('Found chat:', chat);
+
         if (chat) {
             dispatch(setSelectedChat(chat));
+        } else {
+            console.log('No chat found for user:', selectedUserId);
         }
     };
 
@@ -53,6 +63,31 @@ function UserList({ searchkey }) {
         }
         return false;
     };
+
+    const getLastMessageTimestamp = (userId) => {
+        const chat = allChats.find(chat => chat.members.map(m => m._id).includes(userId));
+        
+        if(!chat || !chat.lastMessage){
+            return "";
+        }else{
+            return moment(chat?.lastMessage?.createdAt).format('hh:mm A');
+        }
+    }
+
+    const getLastMessage = (userId) => {
+        const chat = allChats.find(chat => chat.members.map(m => m._id).includes(userId));
+        
+        if(!chat){
+            return "";
+        }else{
+            const msgPrefix = chat?.lastMessage?.sender === currentUser._id ? "You: " : "";
+            return chat?.lastMessage?.text?.substring(0,25);
+        }
+    }
+
+    function formatName(user){
+        let fname =user.firstname.at(0).toUpperCase() + user.firstname.slice(1).toLowerCase();
+    }
 
     // extract unique chat users (chat list style)
     const chatUsers = allChats
@@ -141,8 +176,12 @@ function UserList({ searchkey }) {
                                         {user.lastname[0].toUpperCase() + user.lastname.slice(1)}
                                     </div>
                                     <div className="user-display-email">
-                                        {user.email}
+                                        {getLastMessage(user._id) || user.email}
                                     </div>
+                                </div>
+
+                                <div className="last-message-timestamp">
+                                    {getLastMessageTimestamp(user._id)}
                                 </div>
 
                                 {isFromSearch && !hasChat && (

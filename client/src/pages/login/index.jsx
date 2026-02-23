@@ -28,7 +28,7 @@ function Login() {
 
         }catch(error){
             dispatch(hideLoader());
-            toast.error(response.message);
+            toast.error(error.message || 'An error occurred');
         }
     }
     return (

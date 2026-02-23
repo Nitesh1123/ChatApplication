@@ -38,15 +38,15 @@ route.get('/get-all-messages/:chatId', authMiddleware, async(req,res) => {
         const allMessages = await Message.find({chatId: req.params.chatId}).sort({createdAt: 1});
 
         res.send({
-            message:'Message Sent Successfully',
-            status: true,
+            message:'Message fetched Successfully',
+            success: true,
             data : allMessages
         })
 
     } catch(error){
         res.status(400).send({
             message: error.message,
-            status: false
+            success: false
         });
     }
 })

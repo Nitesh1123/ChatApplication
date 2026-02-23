@@ -4,6 +4,7 @@ const authRouter = require('./controllers/authController');
 const userRouter = require('./controllers/userController');
 const chatRouter = require('./controllers/chatController');
 const messageRouter = require('./controllers/messageController');
+
 // using auth controller router 
 app.use(express.json()); // check for json data in request body and conver it to js object
 app.use('/api/auth', authRouter);

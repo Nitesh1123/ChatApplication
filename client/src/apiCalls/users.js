@@ -5,7 +5,7 @@ export const getLoggedUser = async() => {
          const response = await axiosInstance.get("/api/user/get-logged-user");
         return response.data;
     }catch(error){
-        return error.response.data;
+        return error.response?.data || { success: false, message: error.message };
     }
 }
 export const getAllUsers = async() => {
@@ -13,6 +13,6 @@ export const getAllUsers = async() => {
          const response = await axiosInstance.get("/api/user/get-all-user");
         return response.data;
     }catch(error){
-        return error.response.data;
+        return error.response?.data || { success: false, message: error.message };
     }
 }

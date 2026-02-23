@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { hideLoader, showLoader } from "../redux/loaderSlice";
 import { setUser, setAllUsers, setAllChats } from "../redux/userSlice";
 import { getAllChats } from "../apiCalls/chat";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 function ProtectedRoute({children}) {
     const user = useSelector(state => state.userReducer.user);
