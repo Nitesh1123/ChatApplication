@@ -16,7 +16,7 @@ body{
 *************CSS STYLES FOR LOGIN & SIGNUP**************
 ********************************************************/
 .container-back-img{
-  background-image: url('./../public/images/quick-chat-app-background.jpg');
+  /* background-image: url('./../public/images/quick-chat-app-background.jpg'); */
   background-repeat: no-repeat;
   background-size: cover;
   width: 100%;
