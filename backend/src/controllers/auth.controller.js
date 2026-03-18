@@ -112,7 +112,11 @@ export const login = async (req, res) => {
 };
 
 export const logout = (_, res) => {
-  res.cookie("jwt", "", { maxAge: 0 });
+  res.clearCookie("jwt", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  });
   res.status(200).json({ message: "Logged out successfully" });
 };
 
@@ -219,8 +223,12 @@ export const deleteAccount = async (req, res) => {
     // Delete the user
     await User.findByIdAndDelete(userId);
 
-    // Clear the JWT cookie
-    res.cookie("jwt", "", { maxAge: 0 });
+    // Clear the JWT cookie with the same production flags used when setting it.
+    res.clearCookie("jwt", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    });
 
     res.status(200).json({ message: "Account deleted successfully" });
   } catch (error) {
