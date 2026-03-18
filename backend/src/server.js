@@ -17,7 +17,18 @@ const PORT = ENV.PORT || 3000;
 
 app.use(express.json({ limit: "10mb" })); // req.body
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
+app.use(
+  cors({
+    origin: [
+      process.env.CLIENT_URL,
+      "http://localhost:5173",
+      "https://chat-application-six-sooty.vercel.app"
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+  })
+);
 app.use(helmet());
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
@@ -26,7 +37,14 @@ if (process.env.NODE_ENV === "development") {
 }
 app.use(cookieParser());
 
-app.options("*", cors());
+app.options("*", cors({
+  origin: [
+    process.env.CLIENT_URL,
+    "http://localhost:5173",
+    "https://chat-application-six-sooty.vercel.app"
+  ],
+  credentials: true,
+}));
 
 app.get("/health", (req, res) => {
   res.status(200).json({
