@@ -2,14 +2,25 @@ import mongoose from "mongoose";
 import { ENV } from "./env.js";
 
 export const connectDB = async () => {
-  try {
-    const { MONGO_URI } = ENV;
-    if (!MONGO_URI) throw new Error("MONGO_URI is not set");
+  const retries = 3;
+  const delay = 3000;
 
-    const conn = await mongoose.connect(ENV.MONGO_URI);
-    console.log("MONGODB CONNECTED:", conn.connection.host);
-  } catch (error) {
-    console.error("Error connection to MONGODB:", error);
-    process.exit(1); // 1 status code means fail, 0 means success
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const conn = await mongoose.connect(process.env.MONGO_URI);
+      console.log(`✅ MongoDB connected: ${conn.connection.host}`);
+      return;
+    } catch (error) {
+      console.error(
+        `❌ MongoDB connection attempt ${attempt}/${retries} failed:`,
+        error.message
+      );
+      if (attempt === retries) {
+        console.error("❌ All MongoDB connection attempts failed. Exiting.");
+        process.exit(1);
+      }
+      console.log(`⏳ Retrying in ${delay / 1000} seconds...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
 };

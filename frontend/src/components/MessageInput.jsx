@@ -1,17 +1,34 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 import toast from "react-hot-toast";
-import { ImageIcon, SendIcon, XIcon } from "lucide-react";
+import {
+  ImageIcon,
+  SendIcon,
+  XIcon,
+  SmileIcon,
+  PaperclipIcon,
+} from "lucide-react";
 
 function MessageInput() {
   const { playRandomKeyStrokeSound } = useKeyboardSound();
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
+  const [isFocused, setIsFocused] = useState(false);
 
   const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
-  const { sendMessage, isSoundEnabled } = useChatStore();
+  const { sendMessage, isSoundEnabled, selectedUser } = useChatStore();
+  const { socket } = useAuthStore();
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -22,9 +39,18 @@ function MessageInput() {
       text: text.trim(),
       image: imagePreview,
     });
+
+    // Stop typing indicator when message is sent
+    if (socket && selectedUser) {
+      socket.emit("stopTyping", { receiverId: selectedUser._id });
+    }
+
     setText("");
-    setImagePreview("");
+    setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+
+    // Clear typing timeout
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
   };
 
   const handleImageChange = (e) => {
@@ -44,19 +70,41 @@ function MessageInput() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const hasContent = text.trim() || imagePreview;
+
+  const handleTextChange = (e) => {
+    const newText = e.target.value;
+    setText(newText);
+    isSoundEnabled && playRandomKeyStrokeSound();
+
+    // Emit typing event
+    if (socket && selectedUser) {
+      socket.emit("typing", { receiverId: selectedUser._id });
+
+      // Clear previous timeout
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+      // Stop typing after 2 seconds of no input
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit("stopTyping", { receiverId: selectedUser._id });
+      }, 2000);
+    }
+  };
+
   return (
-    <div className="p-4 border-t border-slate-700/50">
+    <div className="p-4 bg-[#313338]">
+      {/* Image Preview */}
       {imagePreview && (
-        <div className="max-w-3xl mx-auto mb-3 flex items-center">
-          <div className="relative">
+        <div className="mb-3 px-4">
+          <div className="relative inline-block">
             <img
               src={imagePreview}
               alt="Preview"
-              className="w-20 h-20 object-cover rounded-lg border border-slate-700"
+              className="w-24 h-24 object-cover rounded-xl border border-[#3f4147]"
             />
             <button
               onClick={removeImage}
-              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-slate-200 hover:bg-slate-700"
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#2b2d31] border border-border flex items-center justify-center text-muted hover:text-white hover:bg-[#35373c] transition-colors"
               type="button"
             >
               <XIcon className="w-4 h-4" />
@@ -65,18 +113,31 @@ function MessageInput() {
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex space-x-4">
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            isSoundEnabled && playRandomKeyStrokeSound();
-          }}
-          className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
-          placeholder="Type your message..."
-        />
+      {/* Input Bar */}
+      <form
+        onSubmit={handleSendMessage}
+        className={`mx-4 mb-4 bg-[#383a40] rounded-xl flex items-center gap-2 px-4 py-2 transition-shadow duration-200 ${
+          isFocused ? "shadow-[0_0_0_2px_rgba(88,101,242,0.3)]" : ""
+        }`}
+      >
+        {/* Left Icons */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2 text-muted hover:text-white transition-colors rounded-lg hover:bg-[#404249]"
+          >
+            <PaperclipIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            className="p-2 text-muted hover:text-white transition-colors rounded-lg hover:bg-[#404249]"
+          >
+            <SmileIcon className="w-5 h-5" />
+          </button>
+        </div>
 
+        {/* Hidden File Input */}
         <input
           type="file"
           accept="image/*"
@@ -85,24 +146,32 @@ function MessageInput() {
           className="hidden"
         />
 
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-4 transition-colors ${
-            imagePreview ? "text-cyan-500" : ""
-          }`}
-        >
-          <ImageIcon className="w-5 h-5" />
-        </button>
+        {/* Text Input */}
+        <input
+          type="text"
+          value={text}
+          onChange={handleTextChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className="flex-1 bg-transparent text-white placeholder-muted text-sm py-2 focus:outline-none"
+          placeholder="Type a message..."
+        />
+
+        {/* Send Button (only visible when there's content) */}
         <button
           type="submit"
-          disabled={!text.trim() && !imagePreview}
-          className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg px-4 py-2 font-medium hover:from-cyan-600 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!hasContent}
+          className={`p-2 rounded-lg transition-all duration-200 ${
+            hasContent
+              ? "bg-brand text-white hover:bg-[#4752c4] cursor-pointer"
+              : "text-muted cursor-default"
+          }`}
         >
-          <SendIcon className="w-5 h-5" />
+          <SendIcon className={`w-5 h-5 ${hasContent ? "" : "text-muted"}`} />
         </button>
       </form>
     </div>
   );
 }
+
 export default MessageInput;

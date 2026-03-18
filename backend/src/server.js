@@ -2,6 +2,8 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import path from "path";
 import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
@@ -13,9 +15,29 @@ const __dirname = path.resolve();
 
 const PORT = ENV.PORT || 3000;
 
-app.use(express.json({ limit: "5mb" })); // req.body
+app.use(express.json({ limit: "10mb" })); // req.body
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
+app.use(helmet());
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+} else {
+  app.use(morgan("combined"));
+}
 app.use(cookieParser());
+
+app.options("*", cors());
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    app: "Chatify",
+    developer: "Nitesh Kumar",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV
+  });
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
