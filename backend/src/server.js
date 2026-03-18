@@ -19,11 +19,29 @@ app.use(express.json({ limit: "10mb" })); // req.body
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(
   cors({
-    origin: [
-      process.env.CLIENT_URL,
-      "http://localhost:5173",
-      "https://chat-application-six-sooty.vercel.app"
-    ],
+    origin: function(origin, callback) {
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "https://chat-application-six-sooty.vercel.app",
+        "https://chat-application-git-main-niteshs-projects-73602fbb.vercel.app",
+        process.env.CLIENT_URL,
+      ];
+
+      // Allow requests with no origin (mobile apps, curl, etc)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        // Also allow any vercel.app subdomain for this project
+        if (origin.includes("niteshs-projects-73602fbb.vercel.app") ||
+            origin.includes("chat-application")) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
@@ -37,14 +55,7 @@ if (process.env.NODE_ENV === "development") {
 }
 app.use(cookieParser());
 
-app.options("*", cors({
-  origin: [
-    process.env.CLIENT_URL,
-    "http://localhost:5173",
-    "https://chat-application-six-sooty.vercel.app"
-  ],
-  credentials: true,
-}));
+app.options("*", cors());
 
 app.get("/health", (req, res) => {
   res.status(200).json({

@@ -8,11 +8,29 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: [
-      process.env.CLIENT_URL,
-      "http://localhost:5173",
-      "https://chat-application-six-sooty.vercel.app"
-    ],
+    origin: function(origin, callback) {
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "https://chat-application-six-sooty.vercel.app",
+        "https://chat-application-git-main-niteshs-projects-73602fbb.vercel.app",
+        process.env.CLIENT_URL,
+      ];
+
+      // Allow requests with no origin (mobile apps, curl, etc)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        // Also allow any vercel.app subdomain for this project
+        if (origin.includes("niteshs-projects-73602fbb.vercel.app") ||
+            origin.includes("chat-application")) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      }
+    },
     credentials: true,
     methods: ["GET", "POST"],
   },
