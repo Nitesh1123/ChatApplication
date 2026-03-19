@@ -1,6 +1,5 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
@@ -40,8 +39,10 @@ app.use(
         callback(null, true);
       } else {
         // Also allow any vercel.app subdomain for this project
-        if (origin.includes("niteshs-projects-73602fbb.vercel.app") ||
-            origin.includes("chat-application")) {
+        if (
+          origin.includes("niteshs-projects-73602fbb.vercel.app") ||
+          origin.includes("chat-application")
+        ) {
           callback(null, true);
         } else {
           callback(new Error("Not allowed by CORS"));
@@ -70,7 +71,7 @@ app.get("/health", (req, res) => {
     developer: "Nitesh Kumar",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
   });
 });
 
@@ -78,39 +79,26 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
 if (process.env.NODE_ENV === "production") {
-  // Try multiple possible paths and use whichever exists
-  const possiblePaths = [
-    path.join(__dirname, "../../frontend/dist"),
-    path.join(__dirname, "../../../frontend/dist"),
-    path.join(process.cwd(), "frontend/dist"),
-    path.join(process.cwd(), "../frontend/dist"),
-  ];
+  const frontendDist = path.join(process.cwd(), "frontend/dist");
 
-  let frontendDistPath = null;
+  console.log("Serving static from:", frontendDist);
 
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      frontendDistPath = p;
-      console.log("✅ Found frontend dist at:", p);
-      break;
-    } else {
-      console.log("❌ Not found at:", p);
-    }
-  }
+  app.use(
+    express.static(frontendDist, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith(".js")) {
+          res.setHeader("Content-Type", "application/javascript");
+        }
+        if (filePath.endsWith(".css")) {
+          res.setHeader("Content-Type", "text/css");
+        }
+      },
+    })
+  );
 
-  if (frontendDistPath) {
-    app.use(express.static(frontendDistPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(frontendDistPath, "index.html"));
-    });
-  } else {
-    console.error("❌ Could not find frontend/dist in any expected location");
-    console.log("Current working directory:", process.cwd());
-    console.log("__dirname:", __dirname);
-    app.get("*", (req, res) => {
-      res.status(404).send("Frontend build not found");
-    });
-  }
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
 }
 
 server.on("error", (error) => {
