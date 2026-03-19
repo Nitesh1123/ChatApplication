@@ -14,7 +14,8 @@ import { Link, useNavigate } from "react-router";
 import toast from "react-hot-toast";
 
 function ProfileSettingsPage() {
-  const { authUser, updateProfile, isUpdatingProfile, changePassword, deleteAccount } = useAuthStore();
+  const { authUser, updateProfile, isUpdatingProfile, changePassword, deleteAccount, logout } =
+    useAuthStore();
   const navigate = useNavigate();
 
   // Avatar state
@@ -38,6 +39,7 @@ function ProfileSettingsPage() {
   // Delete account modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Avatar handlers
   const handleImageSelect = (e) => {
@@ -118,6 +120,15 @@ function ProfileSettingsPage() {
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -360,6 +371,38 @@ function ProfileSettingsPage() {
             <TrashIcon className="w-4 h-4" />
             Delete Account
           </button>
+        </div>
+
+        <div className="pt-6 border-t border-[#3f4147]">
+          <button
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#2b2d31] border border-[#3f4147] hover:bg-[#ed4245] hover:border-[#ed4245] hover:text-white text-[#dcddde] rounded-lg font-medium transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isLoggingOut ? (
+              <LoaderIcon className="w-5 h-5 animate-spin" />
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-5 h-5"
+                aria-hidden="true"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <path d="M16 17l5-5-5-5" />
+                <path d="M21 12H9" />
+              </svg>
+            )}
+            Log Out
+          </button>
+          <p className="mt-3 text-[#949ba4] text-xs text-center">
+            You will be logged out of all devices
+          </p>
         </div>
       </div>
 
