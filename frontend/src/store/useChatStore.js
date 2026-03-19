@@ -136,6 +136,41 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  editMessage: async (messageId, text) => {
+    try {
+      const res = await axiosInstance.put(`/messages/${messageId}`, { text });
+      set((state) => {
+        const updatedMessages = state.messages.map((msg) =>
+          msg._id === messageId
+            ? { ...msg, text: res.data.text, isEdited: true, editedAt: res.data.editedAt }
+            : msg
+        );
+        const selectedUserId = state.selectedUser?._id;
+        const lastMessage = selectedUserId
+          ? updatedMessages.filter(
+              (msg) =>
+                msg.senderId === selectedUserId || msg.receiverId === selectedUserId
+            ).at(-1)
+          : null;
+
+        return {
+          messages: updatedMessages,
+          messagePreviews:
+            selectedUserId && lastMessage
+              ? {
+                  ...state.messagePreviews,
+                  [selectedUserId]: buildPreviewEntry(lastMessage),
+                }
+              : state.messagePreviews,
+        };
+      });
+    } catch (error) {
+      console.error("Edit message error:", error);
+      toast.error(error.response?.data?.message || "Failed to edit message");
+      throw error;
+    }
+  },
+
   subscribeToMessages: () => {
     const { selectedUser, isSoundEnabled } = get();
     if (!selectedUser) return;
@@ -182,6 +217,31 @@ export const useChatStore = create((set, get) => ({
       await get().fetchMessagePreviews();
     });
 
+    socket.on("messageEdited", ({ messageId, text, isEdited, editedAt }) => {
+      set((state) => {
+        const updatedMessages = state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, text, isEdited, editedAt } : msg
+        );
+        const selectedUserId = state.selectedUser?._id;
+        const lastMessage = selectedUserId
+          ? updatedMessages.filter(
+              (msg) => msg.senderId === selectedUserId || msg.receiverId === selectedUserId
+            ).at(-1)
+          : null;
+
+        return {
+          messages: updatedMessages,
+          messagePreviews:
+            selectedUserId && lastMessage
+              ? {
+                  ...state.messagePreviews,
+                  [selectedUserId]: buildPreviewEntry(lastMessage),
+                }
+              : state.messagePreviews,
+        };
+      });
+    });
+
     socket.on("typing", ({ senderId }) => {
       if (senderId === get().selectedUser?._id) {
         set({ isTyping: true });
@@ -199,6 +259,7 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     socket.off("newMessage");
     socket.off("messageDeleted");
+    socket.off("messageEdited");
     socket.off("typing");
     socket.off("stopTyping");
   },

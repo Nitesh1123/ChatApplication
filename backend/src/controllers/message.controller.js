@@ -195,3 +195,53 @@ export const deleteMessage = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const editMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { text } = req.body;
+    const userId = req.user._id;
+
+    if (!text || text.trim() === "") {
+      return res.status(400).json({ message: "Message cannot be empty" });
+    }
+
+    if (text.length > 2000) {
+      return res.status(400).json({ message: "Message too long" });
+    }
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({
+        message: "You can only edit your own messages",
+      });
+    }
+
+    const sanitizedText = text.trim().replace(/<[^>]*>/g, "");
+
+    message.text = sanitizedText;
+    message.isEdited = true;
+    message.editedAt = new Date();
+    await message.save();
+
+    const receiverSocketId = getReceiverSocketId(message.receiverId.toString());
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageEdited", {
+        messageId: message._id,
+        text: sanitizedText,
+        isEdited: true,
+        editedAt: message.editedAt,
+      });
+    }
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.error("Edit message error:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

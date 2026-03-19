@@ -44,6 +44,7 @@ function ChatContainer() {
     unsubscribeFromMessages,
     isTyping,
     deleteMessage,
+    editMessage,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const { startCall } = useCall();
@@ -53,6 +54,8 @@ function ChatContainer() {
   const [confirmDeleteMessageId, setConfirmDeleteMessageId] = useState(null);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editText, setEditText] = useState("");
 
   useEffect(() => {
     getMessagesByUserId(selectedUser._id);
@@ -126,6 +129,13 @@ function ChatContainer() {
     } finally {
       setDeletingMessageId(null);
     }
+  };
+
+  const handleEditSave = async (messageId) => {
+    if (!editText.trim()) return;
+    await editMessage(messageId, editText);
+    setEditingMessageId(null);
+    setEditText("");
   };
 
   return (
@@ -215,6 +225,19 @@ function ChatContainer() {
                                 type="button"
                                 onClick={(event) => {
                                   event.stopPropagation();
+                                  setEditingMessageId(msg._id);
+                                  setEditText(msg.text || "");
+                                  setConfirmDeleteMessageId(null);
+                                  setOpenMenuMessageId(null);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm text-[#f2f3f5] hover:bg-[#35373c]"
+                              >
+                                {"\u270F\uFE0F Edit"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
                                   setConfirmDeleteMessageId(msg._id);
                                 }}
                                 className="w-full rounded-md px-3 py-2 text-left text-red-400 transition-colors hover:bg-[#35373c]"
@@ -271,7 +294,53 @@ function ChatContainer() {
                             className="mb-2 max-h-[300px] max-w-[300px] cursor-pointer rounded-xl border border-[#3f4147] object-cover transition-opacity hover:opacity-90"
                           />
                         )}
-                        {msg.text && <p className="text-sm leading-relaxed">{msg.text}</p>}
+                        {editingMessageId === msg._id ? (
+                          <div className="flex min-w-[200px] flex-col gap-2">
+                            <textarea
+                              value={editText}
+                              onChange={(event) => setEditText(event.target.value)}
+                              className="w-full resize-none rounded-lg border border-[#5865f2] bg-[#1e1f22] p-2 text-sm text-white focus:outline-none"
+                              rows={3}
+                              autoFocus
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" && !event.shiftKey) {
+                                  event.preventDefault();
+                                  handleEditSave(msg._id);
+                                }
+                                if (event.key === "Escape") {
+                                  setEditingMessageId(null);
+                                  setEditText("");
+                                }
+                              }}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingMessageId(null);
+                                  setEditText("");
+                                }}
+                                className="px-2 py-1 text-xs text-[#949ba4] hover:text-white"
+                              >
+                                Cancel (Esc)
+                              </button>
+                              <button
+                                onClick={() => handleEditSave(msg._id)}
+                                className="rounded-md bg-[#5865f2] px-3 py-1 text-xs text-white hover:bg-[#4752c4]"
+                              >
+                                Save (Enter)
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          msg.text && (
+                            <p className="text-sm leading-relaxed">
+                              {msg.text}
+                              {msg.isEdited && (
+                                <span className="ml-1 text-[10px] text-[#949ba4]">(edited)</span>
+                              )}
+                            </p>
+                          )
+                        )}
                       </div>
 
                       {/* Timestamp */}
