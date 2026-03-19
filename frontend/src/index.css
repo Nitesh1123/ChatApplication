@@ -9,6 +9,18 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+[data-theme="light"] {
+  --bg-base: #ffffff;
+  --bg-surface: #f2f3f5;
+  --bg-chat: #ffffff;
+  background-color: #f2f3f5;
+}
+
+[data-theme="light"] body {
+  background-color: #f2f3f5;
+  color: #2e3338;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

@@ -12,10 +12,12 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import toast from "react-hot-toast";
+import useThemeStore from "../store/useThemeStore";
 
 function ProfileSettingsPage() {
   const { authUser, updateProfile, isUpdatingProfile, changePassword, deleteAccount, logout } =
     useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
 
   // Avatar state
@@ -255,6 +257,24 @@ function ProfileSettingsPage() {
               )}
               Save Changes
             </button>
+          </div>
+        </div>
+
+        <div className="bg-surface rounded-xl border border-border p-6">
+          <h2 className="text-white font-semibold mb-4">Appearance</h2>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-white font-medium">Dark Mode</p>
+              <p className="text-[#949ba4] text-xs mt-1">
+                {theme === "dark" ? "Dark" : "Light"}
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              className="toggle"
+              checked={theme === "dark"}
+              onChange={toggleTheme}
+            />
           </div>
         </div>
 
