@@ -20,8 +20,9 @@ function MessageInput() {
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  const { sendMessage, isSoundEnabled, selectedUser } = useChatStore();
-  const { socket } = useAuthStore();
+  const { sendMessage, isSoundEnabled, selectedUser, replyingTo, clearReplyingTo } =
+    useChatStore();
+  const { socket, authUser } = useAuthStore();
 
   // Cleanup typing timeout on unmount
   useEffect(() => {
@@ -30,12 +31,12 @@ function MessageInput() {
     };
   }, []);
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
     if (isSoundEnabled) playRandomKeyStrokeSound();
 
-    sendMessage({
+    await sendMessage({
       text: text.trim(),
       image: imagePreview,
     });
@@ -47,6 +48,7 @@ function MessageInput() {
 
     setText("");
     setImagePreview(null);
+    clearReplyingTo();
     if (fileInputRef.current) fileInputRef.current.value = "";
 
     // Clear typing timeout
@@ -93,6 +95,28 @@ function MessageInput() {
 
   return (
     <div className="p-4 bg-[#313338]">
+      {replyingTo && (
+        <div className="mx-4 mb-2 flex items-center justify-between rounded-lg border-l-4 border-[#5865f2] bg-[#2b2d31] px-4 py-2">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium text-[#5865f2]">
+              Replying to {replyingTo.senderId === authUser._id ? "yourself" : selectedUser?.fullName}
+            </span>
+            <span className="max-w-[300px] truncate text-xs text-[#949ba4]">
+              {replyingTo.image && !replyingTo.text
+                ? "\u{1F4F7} Image"
+                : replyingTo.text?.slice(0, 80)}
+            </span>
+          </div>
+          <button
+            onClick={clearReplyingTo}
+            className="ml-4 flex-shrink-0 text-lg text-[#949ba4] hover:text-white"
+            type="button"
+          >
+            {"\u2715"}
+          </button>
+        </div>
+      )}
+
       {/* Image Preview */}
       {imagePreview && (
         <div className="mb-3 px-4">
@@ -151,6 +175,9 @@ function MessageInput() {
           type="text"
           value={text}
           onChange={handleTextChange}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") clearReplyingTo();
+          }}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           className="flex-1 bg-transparent text-white placeholder-muted text-sm py-2 focus:outline-none"

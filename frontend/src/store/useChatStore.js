@@ -24,6 +24,7 @@ export const useChatStore = create((set, get) => ({
   isMessagesLoading: false,
   isSoundEnabled: JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
   isTyping: false,
+  replyingTo: null,
 
   toggleSound: () => {
     localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
@@ -33,6 +34,8 @@ export const useChatStore = create((set, get) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
   setSelectedUser: (selectedUser) => set({ selectedUser }),
   setIsTyping: (value) => set({ isTyping: value }),
+  setReplyingTo: (message) => set({ replyingTo: message }),
+  clearReplyingTo: () => set({ replyingTo: null }),
 
   fetchMessagePreviews: async () => {
     try {
@@ -88,7 +91,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser, messages } = get();
+    const { selectedUser, messages, replyingTo } = get();
     const { authUser } = useAuthStore.getState();
 
     const tempId = `temp-${Date.now()}`;
@@ -99,6 +102,7 @@ export const useChatStore = create((set, get) => ({
       receiverId: selectedUser._id,
       text: messageData.text,
       image: messageData.image,
+      replyTo: replyingTo || null,
       createdAt: new Date().toISOString(),
       isOptimistic: true, // flag to identify optimistic messages (optional)
     };
@@ -106,7 +110,10 @@ export const useChatStore = create((set, get) => ({
     set({ messages: [...messages, optimisticMessage] });
 
     try {
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
+      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, {
+        ...messageData,
+        replyTo: replyingTo?._id || null,
+      });
       set((state) => ({
         messages: state.messages
           .filter((message) => message._id !== tempId)
@@ -116,6 +123,7 @@ export const useChatStore = create((set, get) => ({
           [selectedUser._id]: buildPreviewEntry(res.data),
         },
       }));
+      get().clearReplyingTo();
     } catch (error) {
       // remove optimistic message on failure
       set({ messages: messages });

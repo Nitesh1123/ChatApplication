@@ -48,6 +48,7 @@ function ChatContainer() {
     deleteMessage,
     editMessage,
     reactToMessage,
+    setReplyingTo,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const { startCall } = useCall();
@@ -197,6 +198,35 @@ function ChatContainer() {
                         isMine ? "items-end" : "items-start"
                       }`}
                     >
+                      {hoveredMessage === msg._id && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setReplyingTo(msg);
+                          }}
+                          className={`absolute top-0 z-20 rounded p-1 text-[#949ba4] opacity-0 transition-opacity hover:bg-[#35373c] hover:text-white group-hover:opacity-100 ${
+                            isMine ? "-left-8" : "-right-8"
+                          }`}
+                          title="Reply"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                            />
+                          </svg>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={(event) => {
@@ -322,6 +352,20 @@ function ChatContainer() {
                             : "bg-[#2b2d31] text-[#f2f3f5] rounded-2xl rounded-bl-sm"
                         }`}
                       >
+                        {msg.replyTo && (
+                          <div className="mb-1 max-w-[250px] cursor-pointer rounded-lg border-l-4 border-[#5865f2] bg-[#1e1f22] px-3 py-2 opacity-80">
+                            <p className="mb-0.5 text-xs font-medium text-[#5865f2]">
+                              {msg.replyTo.senderId === authUser._id ? "You" : selectedUser.fullName}
+                            </p>
+                            <p className="text-xs text-[#949ba4] truncate">
+                              {msg.replyTo.image && !msg.replyTo.text
+                                ? "\u{1F4F7} Image"
+                                : `${msg.replyTo.text?.slice(0, 60) || ""}${
+                                    msg.replyTo.text?.length > 60 ? "..." : ""
+                                  }`}
+                            </p>
+                          </div>
+                        )}
                         {msg.image && (
                           <img
                             src={msg.image}

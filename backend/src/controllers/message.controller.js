@@ -35,7 +35,9 @@ export const getMessagesByUserId = async (req, res) => {
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
-    });
+    })
+      .populate("replyTo", "text image senderId")
+      .sort({ createdAt: 1 });
 
     res.status(200).json(messages);
   } catch (error) {
@@ -81,7 +83,7 @@ export const getMessagePreviews = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image } = req.body;
+    const { text, image, replyTo } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
@@ -110,6 +112,13 @@ export const sendMessage = async (req, res) => {
       return res.status(404).json({ message: "Receiver not found." });
     }
 
+    if (replyTo) {
+      const originalMessage = await Message.findById(replyTo);
+      if (!originalMessage) {
+        return res.status(404).json({ message: "Original message not found" });
+      }
+    }
+
     let imageUrl;
     if (image) {
       // upload base64 image to cloudinary
@@ -122,9 +131,11 @@ export const sendMessage = async (req, res) => {
       receiverId,
       text: sanitizedText,
       image: imageUrl,
+      replyTo: replyTo || null,
     });
 
     await newMessage.save();
+    await newMessage.populate("replyTo", "text image senderId");
 
     const receiverSocketId = getReceiverSocketId(receiverId);
     if (receiverSocketId) {
