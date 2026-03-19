@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import { existsSync } from "fs";
 import helmet from "helmet";
 import morgan from "morgan";
 
@@ -24,25 +25,7 @@ app.use(express.json({ limit: "10mb" })); // req.body
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow same-origin requests (no origin header)
-      if (!origin) return callback(null, true);
-
-      // Allow these origins
-      const allowed = [
-        "https://chatify-backend-0kwj.onrender.com",
-        "https://chat-application-six-sooty.vercel.app",
-        "https://chat-application-git-main-niteshs-projects-73602fbb.vercel.app",
-        "http://localhost:5173",
-        process.env.CLIENT_URL,
-      ].filter(Boolean);
-
-      if (allowed.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Allow all for now in production
-      }
-    },
+    origin: true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
@@ -56,7 +39,7 @@ if (process.env.NODE_ENV === "development") {
 }
 app.use(cookieParser());
 
-app.options("*", cors());
+app.options("*", cors({ origin: true, credentials: true }));
 
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -73,7 +56,13 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
 if (process.env.NODE_ENV === "production") {
-  const frontendDist = path.join(process.cwd(), "../frontend/dist");
+  let frontendDist = path.join(process.cwd(), "../frontend/dist");
+  if (!existsSync(frontendDist)) {
+    frontendDist = path.join(process.cwd(), "frontend/dist");
+  }
+  if (!existsSync(frontendDist)) {
+    frontendDist = path.join(__dirname, "../../frontend/dist");
+  }
 
   console.log("Serving static from:", frontendDist);
 
