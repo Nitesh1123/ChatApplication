@@ -4,7 +4,7 @@
 
 A full-stack real-time chat application built by **Nitesh Kumar**.
 
-🔗 **Live Demo:** https://chat-application-six-sooty.vercel.app/login
+🔗 **Live Demo:** https://chat-application-git-main-niteshs-projects-73602fbb.vercel.app/
 
 ---
 
