@@ -171,6 +171,20 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  reactToMessage: async (messageId, emoji) => {
+    try {
+      const res = await axiosInstance.post(`/messages/${messageId}/react`, { emoji });
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, reactions: res.data.reactions } : msg
+        ),
+      }));
+    } catch (error) {
+      console.error("React error:", error);
+      toast.error("Failed to add reaction");
+    }
+  },
+
   subscribeToMessages: () => {
     const { selectedUser, isSoundEnabled } = get();
     if (!selectedUser) return;
@@ -242,6 +256,14 @@ export const useChatStore = create((set, get) => ({
       });
     });
 
+    socket.on("messageReaction", ({ messageId, reactions }) => {
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? { ...msg, reactions } : msg
+        ),
+      }));
+    });
+
     socket.on("typing", ({ senderId }) => {
       if (senderId === get().selectedUser?._id) {
         set({ isTyping: true });
@@ -260,6 +282,7 @@ export const useChatStore = create((set, get) => ({
     socket.off("newMessage");
     socket.off("messageDeleted");
     socket.off("messageEdited");
+    socket.off("messageReaction");
     socket.off("typing");
     socket.off("stopTyping");
   },

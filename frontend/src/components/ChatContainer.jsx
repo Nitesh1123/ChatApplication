@@ -6,7 +6,7 @@ import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
 import MessagesLoadingSkeleton from "./MessagesLoadingSkeleton";
-import { ThumbsUpIcon, HeartIcon, LaughIcon, MoreVerticalIcon } from "lucide-react";
+import { MoreVerticalIcon } from "lucide-react";
 
 function formatDate(date) {
   const today = new Date();
@@ -34,6 +34,8 @@ function shouldShowDateDivider(currentMsg, prevMsg) {
   return currentDate !== prevDate;
 }
 
+const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+
 function ChatContainer() {
   const {
     selectedUser,
@@ -45,6 +47,7 @@ function ChatContainer() {
     isTyping,
     deleteMessage,
     editMessage,
+    reactToMessage,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const { startCall } = useCall();
@@ -56,6 +59,7 @@ function ChatContainer() {
   const [previewImage, setPreviewImage] = useState(null);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState("");
+  const [showReactionPicker, setShowReactionPicker] = useState(null);
 
   useEffect(() => {
     getMessagesByUserId(selectedUser._id);
@@ -111,6 +115,14 @@ function ChatContainer() {
       document.body.style.overflow = "";
     };
   }, [previewImage]);
+
+  useEffect(() => {
+    const handleClick = () => setShowReactionPicker(null);
+    if (showReactionPicker) {
+      document.addEventListener("click", handleClick);
+    }
+    return () => document.removeEventListener("click", handleClick);
+  }, [showReactionPicker]);
 
   const handleVideoCall = () => {
     startCall(selectedUser._id, "video");
@@ -180,23 +192,47 @@ function ChatContainer() {
                     )}
 
                     {/* Message Bubble Container */}
-                    <div className={`relative max-w-[70%] ${isMine ? "items-end" : "items-start"}`}>
-                      {/* Emoji Reaction Bar (on hover) */}
-                      {hoveredMessage === msg._id && (
+                    <div
+                      className={`relative max-w-[70%] group ${
+                        isMine ? "items-end" : "items-start"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setShowReactionPicker(
+                            showReactionPicker === msg._id ? null : msg._id
+                          );
+                        }}
+                        className={`absolute -top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-[#3f4147] bg-[#2b2d31] text-sm opacity-0 transition-opacity hover:bg-[#35373c] group-hover:opacity-100 ${
+                          isMine ? "-left-8" : "-right-8"
+                        }`}
+                      >
+                        😊
+                      </button>
+
+                      {showReactionPicker === msg._id && (
                         <div
-                          className={`absolute -top-8 ${
+                          onClick={(event) => event.stopPropagation()}
+                          className={`absolute -top-12 z-20 flex gap-1 rounded-full border border-[#3f4147] bg-[#2b2d31] px-2 py-1 shadow-xl ${
                             isMine ? "right-0" : "left-0"
-                          } flex items-center gap-1 px-2 py-1 bg-[#2b2d31] rounded-full shadow-lg border border-border z-10`}
+                          }`}
                         >
-                          <button className="p-1 hover:scale-110 transition-transform">
-                            <ThumbsUpIcon className="w-4 h-4 text-[#949ba4] hover:text-white" />
-                          </button>
-                          <button className="p-1 hover:scale-110 transition-transform">
-                            <HeartIcon className="w-4 h-4 text-[#949ba4] hover:text-red-400" />
-                          </button>
-                          <button className="p-1 hover:scale-110 transition-transform">
-                            <LaughIcon className="w-4 h-4 text-[#949ba4] hover:text-yellow-400" />
-                          </button>
+                          {REACTIONS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                reactToMessage(msg._id, emoji);
+                                setShowReactionPicker(null);
+                              }}
+                              className="cursor-pointer rounded-full p-1 text-lg transition-transform hover:scale-125 hover:bg-[#35373c]"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
                         </div>
                       )}
 
@@ -342,6 +378,29 @@ function ChatContainer() {
                           )
                         )}
                       </div>
+
+                      {msg.reactions && msg.reactions.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {Object.entries(
+                            msg.reactions.reduce((acc, reaction) => {
+                              acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
+                              return acc;
+                            }, {})
+                          ).map(([emoji, count]) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => reactToMessage(msg._id, emoji)}
+                              className="flex items-center gap-1 rounded-full border border-[#3f4147] bg-[#2b2d31] px-2 py-0.5 text-xs transition-colors hover:bg-[#35373c]"
+                            >
+                              <span>{emoji}</span>
+                              {count > 1 && (
+                                <span className="text-[#949ba4]">{count}</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Timestamp */}
                       <p className="text-xs text-muted mt-1 px-1">

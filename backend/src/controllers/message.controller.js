@@ -245,3 +245,57 @@ export const editMessage = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const reactToMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.user._id;
+
+    const allowedEmojis = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+    if (!allowedEmojis.includes(emoji)) {
+      return res.status(400).json({ message: "Invalid emoji" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    const existingIndex = message.reactions.findIndex(
+      (reaction) =>
+        reaction.userId.toString() === userId.toString() && reaction.emoji === emoji
+    );
+
+    if (existingIndex !== -1) {
+      message.reactions.splice(existingIndex, 1);
+    } else {
+      message.reactions = message.reactions.filter(
+        (reaction) => reaction.userId.toString() !== userId.toString()
+      );
+      message.reactions.push({ emoji, userId });
+    }
+
+    await message.save();
+
+    const receiverSocketId = getReceiverSocketId(message.receiverId.toString());
+    const senderSocketId = getReceiverSocketId(message.senderId.toString());
+
+    const reactionData = {
+      messageId: message._id,
+      reactions: message.reactions,
+    };
+
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageReaction", reactionData);
+    }
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messageReaction", reactionData);
+    }
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.error("React to message error:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
