@@ -72,11 +72,20 @@ app.use("/api/messages", messageRoutes);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+console.log("dirname:", __dirname);
+console.log("Frontend dist path:", path.join(__dirname, "../../frontend/dist"));
+
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../../frontend/dist")));
+  const frontendDistPath = path.join(__dirname, "../../frontend/dist");
+
+  console.log("Serving static files from:", frontendDistPath);
+
+  app.use(express.static(frontendDistPath));
 
   app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../../frontend/dist", "index.html"));
+    const indexPath = path.join(frontendDistPath, "index.html");
+    console.log("Serving index.html from:", indexPath);
+    res.sendFile(indexPath);
   });
 }
 
