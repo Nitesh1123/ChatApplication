@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "engines": {
-    "node": ">=20.0.0"
+    "node": "20.x"
   },
   "scripts": {
-    "build": "cd frontend && npm install --include=dev && npm run build",
+    "build": "cd backend && npm ci && cd ../frontend && npm ci --include=dev && npm run build",
     "start": "cd backend && node src/server.js"
   },
   "keywords": [],

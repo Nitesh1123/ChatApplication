@@ -9,10 +9,9 @@ import morgan from "morgan";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
-import { ENV } from "./lib/env.js";
 import { app, server } from "./lib/socket.js";
 
-const PORT = ENV.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "10mb" })); // req.body
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -80,6 +79,11 @@ if (process.env.NODE_ENV === "production") {
     res.sendFile(path.join(__dirname, "../../frontend/dist", "index.html"));
   });
 }
+
+server.on("error", (error) => {
+  console.error("Server startup failed:", error);
+  process.exit(1);
+});
 
 server.listen(PORT, () => {
   console.log("Server running on port: " + PORT);
