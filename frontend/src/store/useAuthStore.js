@@ -110,10 +110,13 @@ export const useAuthStore = create((set, get) => ({
     const { authUser } = get();
     if (!authUser || get().socket?.connected) return;
 
-    const socket = io(import.meta.env.VITE_API_URL || "http://localhost:3000", {
-      withCredentials: true,
-      transports: ["websocket", "polling"],
-    });
+    const socket = io(
+      import.meta.env.VITE_API_URL || window.location.origin,
+      {
+        withCredentials: true,
+        transports: ["websocket", "polling"],
+      }
+    );
 
     socket.connect();
 
