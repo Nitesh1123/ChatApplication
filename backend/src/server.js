@@ -79,7 +79,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
 if (process.env.NODE_ENV === "production") {
-  const frontendDist = path.join(process.cwd(), "frontend/dist");
+  const frontendDist = path.join(process.cwd(), "../frontend/dist");
 
   console.log("Serving static from:", frontendDist);
 
