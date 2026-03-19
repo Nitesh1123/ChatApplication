@@ -24,29 +24,23 @@ app.use(express.json({ limit: "10mb" })); // req.body
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(
   cors({
-    origin: function(origin, callback) {
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "https://chat-application-six-sooty.vercel.app",
-        "https://chat-application-git-main-niteshs-projects-73602fbb.vercel.app",
-        process.env.CLIENT_URL,
-      ];
-
-      // Allow requests with no origin (mobile apps, curl, etc)
+    origin: function (origin, callback) {
+      // Allow same-origin requests (no origin header)
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
+      // Allow these origins
+      const allowed = [
+        "https://chatify-backend-0kwj.onrender.com",
+        "https://chat-application-six-sooty.vercel.app",
+        "https://chat-application-git-main-niteshs-projects-73602fbb.vercel.app",
+        "http://localhost:5173",
+        process.env.CLIENT_URL,
+      ].filter(Boolean);
+
+      if (allowed.includes(origin)) {
         callback(null, true);
       } else {
-        // Also allow any vercel.app subdomain for this project
-        if (
-          origin.includes("niteshs-projects-73602fbb.vercel.app") ||
-          origin.includes("chat-application")
-        ) {
-          callback(null, true);
-        } else {
-          callback(new Error("Not allowed by CORS"));
-        }
+        callback(null, true); // Allow all for now in production
       }
     },
     credentials: true,
