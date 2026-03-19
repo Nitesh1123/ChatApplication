@@ -39,7 +39,7 @@ const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 function ChatContainer() {
   const {
     selectedUser,
-    getMessagesByUserId,
+    getMessages,
     messages,
     isMessagesLoading,
     subscribeToMessages,
@@ -63,11 +63,11 @@ function ChatContainer() {
   const [showReactionPicker, setShowReactionPicker] = useState(null);
 
   useEffect(() => {
-    getMessagesByUserId(selectedUser._id);
+    getMessages(selectedUser._id);
     subscribeToMessages();
 
     return () => unsubscribeFromMessages();
-  }, [selectedUser, getMessagesByUserId, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
     if (messageEndRef.current) {
@@ -206,7 +206,7 @@ function ChatContainer() {
                             setReplyingTo(msg);
                           }}
                           className={`absolute top-0 z-20 rounded p-1 text-[#949ba4] opacity-0 transition-opacity hover:bg-[#35373c] hover:text-white group-hover:opacity-100 ${
-                            isMine ? "-left-8" : "-right-8"
+                            isMine ? "-left-16" : "-right-16"
                           }`}
                           title="Reply"
                         >

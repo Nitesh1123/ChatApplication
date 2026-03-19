@@ -38,7 +38,7 @@ io.on("connection", (socket) => {
   socket.on("call:initiate", ({ to, from, type, peerId }) => {
     const receiverSocketId = getReceiverSocketId(to);
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("call:incoming", { from, type, peerId });
+      io.to(receiverSocketId).emit("call:initiate", { from, type, peerId });
     }
   });
 

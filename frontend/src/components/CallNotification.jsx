@@ -1,9 +1,8 @@
 import { useEffect, useRef } from "react";
-import { PhoneIcon, PhoneOffIcon, UserIcon } from "lucide-react";
+import { PhoneIcon, PhoneOffIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 
-// Ringtone sound (using a simple beep pattern until a real ringtone file is available)
-const RINGTONE_URL = "/ringtone.mp3";
+const RINGTONE_URL = "/sounds/notification.mp3";
 
 function CallNotification({
   isRinging,

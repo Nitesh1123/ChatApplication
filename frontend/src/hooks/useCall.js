@@ -31,6 +31,67 @@ export function useCall() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
 
+  const cleanupCall = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+
+    if (currentCallRef.current) {
+      try {
+        currentCallRef.current.close();
+      } catch (error) {
+        console.debug("Error closing current call:", error);
+      }
+      currentCallRef.current = null;
+    }
+
+    remoteStreamRef.current = null;
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+
+    setCallState(CALL_STATES.IDLE);
+    setCallType(null);
+    setRemoteUser(null);
+    setCallDuration(0);
+    setIsMuted(false);
+    setIsVideoOff(false);
+    setIncomingCallData(null);
+    clearInterval(durationIntervalRef.current);
+  }, []);
+
+  const connectToPeer = useCallback(async (targetPeerId) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: callType === "video",
+        audio: true,
+      });
+      localStreamRef.current = stream;
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      const call = peerRef.current.call(targetPeerId, stream);
+      currentCallRef.current = call;
+
+      call.on("stream", (remoteStream) => {
+        remoteStreamRef.current = remoteStream;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
+      });
+
+      call.on("close", cleanupCall);
+      call.on("error", cleanupCall);
+
+      setCallState(CALL_STATES.CONNECTED);
+    } catch (err) {
+      console.error("Media error:", err);
+      cleanupCall();
+    }
+  }, [callType, cleanupCall]);
+
   // Initialize PeerJS
   useEffect(() => {
     if (!authUser?._id) return;
@@ -65,7 +126,7 @@ export function useCall() {
         peer.on("call", (call) => {
           console.log("Incoming PeerJS call");
           currentCallRef.current = call;
-          
+
           call.on("stream", (remoteStream) => {
             remoteStreamRef.current = remoteStream;
             if (remoteVideoRef.current) {
@@ -100,7 +161,7 @@ export function useCall() {
         peer.destroy();
       }
     };
-  }, [authUser?._id]);
+  }, [authUser?._id, cleanupCall]);
 
   // Handle socket events
   useEffect(() => {
@@ -126,18 +187,18 @@ export function useCall() {
       cleanupCall();
     };
 
-    socket.on("call:incoming", handleIncoming);
+    socket.on("call:initiate", handleIncoming);
     socket.on("call:accepted", handleAccepted);
     socket.on("call:rejected", handleRejected);
     socket.on("call:ended", handleEnded);
 
     return () => {
-      socket.off("call:incoming", handleIncoming);
+      socket.off("call:initiate", handleIncoming);
       socket.off("call:accepted", handleAccepted);
       socket.off("call:rejected", handleRejected);
       socket.off("call:ended", handleEnded);
     };
-  }, [socket]);
+  }, [socket, connectToPeer, cleanupCall]);
 
   // Duration timer
   useEffect(() => {
@@ -150,38 +211,6 @@ export function useCall() {
     }
     return () => clearInterval(durationIntervalRef.current);
   }, [callState]);
-
-  const connectToPeer = useCallback(async (targetPeerId) => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: callType === "video",
-        audio: true,
-      });
-      localStreamRef.current = stream;
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      const call = peerRef.current.call(targetPeerId, stream);
-      currentCallRef.current = call;
-
-      call.on("stream", (remoteStream) => {
-        remoteStreamRef.current = remoteStream;
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-        }
-      });
-
-      call.on("close", cleanupCall);
-      call.on("error", cleanupCall);
-
-      setCallState(CALL_STATES.CONNECTED);
-    } catch (err) {
-      console.error("Media error:", err);
-      cleanupCall();
-    }
-  }, [callType]);
 
   const startCall = useCallback(async (userId, type) => {
     if (!socket || !peerId) {
@@ -200,6 +229,12 @@ export function useCall() {
       peerId,
     });
   }, [socket, peerId, authUser?._id]);
+
+  const rejectCall = useCallback(() => {
+    if (!socket || !incomingCallData) return;
+    socket.emit("call:rejected", { to: incomingCallData.from });
+    cleanupCall();
+  }, [socket, incomingCallData, cleanupCall]);
 
   const answerCall = useCallback(async () => {
     if (!socket || !incomingCallData || !peerRef.current) return;
@@ -238,46 +273,13 @@ export function useCall() {
       console.error("Answer error:", err);
       rejectCall();
     }
-  }, [socket, incomingCallData, peerId]);
-
-  const rejectCall = useCallback(() => {
-    if (!socket || !incomingCallData) return;
-    socket.emit("call:rejected", { to: incomingCallData.from });
-    cleanupCall();
-  }, [socket, incomingCallData]);
+  }, [socket, incomingCallData, peerId, cleanupCall, rejectCall]);
 
   const endCall = useCallback(() => {
     if (!socket || !remoteUser) return;
     socket.emit("call:ended", { to: remoteUser._id });
     cleanupCall();
-  }, [socket, remoteUser]);
-
-  const cleanupCall = useCallback(() => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((t) => t.stop());
-      localStreamRef.current = null;
-    }
-
-    if (currentCallRef.current) {
-      try {
-        currentCallRef.current.close();
-      } catch (e) {}
-      currentCallRef.current = null;
-    }
-
-    remoteStreamRef.current = null;
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-
-    setCallState(CALL_STATES.IDLE);
-    setCallType(null);
-    setRemoteUser(null);
-    setCallDuration(0);
-    setIsMuted(false);
-    setIsVideoOff(false);
-    setIncomingCallData(null);
-    clearInterval(durationIntervalRef.current);
-  }, []);
+  }, [socket, remoteUser, cleanupCall]);
 
   const toggleMute = useCallback(() => {
     if (localStreamRef.current) {

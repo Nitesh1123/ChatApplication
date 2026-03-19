@@ -4,7 +4,6 @@ import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import toast from "react-hot-toast";
 import {
-  ImageIcon,
   SendIcon,
   XIcon,
   SmileIcon,
@@ -36,10 +35,11 @@ function MessageInput() {
     if (!text.trim() && !imagePreview) return;
     if (isSoundEnabled) playRandomKeyStrokeSound();
 
-    await sendMessage({
+    const didSend = await sendMessage({
       text: text.trim(),
       image: imagePreview,
     });
+    if (!didSend) return;
 
     // Stop typing indicator when message is sent
     if (socket && selectedUser) {
@@ -48,7 +48,6 @@ function MessageInput() {
 
     setText("");
     setImagePreview(null);
-    clearReplyingTo();
     if (fileInputRef.current) fileInputRef.current.value = "";
 
     // Clear typing timeout

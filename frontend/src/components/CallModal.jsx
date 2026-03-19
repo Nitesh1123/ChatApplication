@@ -5,14 +5,11 @@ import {
   VideoOffIcon,
   MicIcon,
   MicOffIcon,
-  XIcon,
-  Maximize2Icon,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 
 function CallModal({
-  callState,
   callType,
   remoteUser,
   callDuration,
@@ -24,7 +21,6 @@ function CallModal({
   isCalling,
   isRinging,
   isConnected,
-  startCall,
   answerCall,
   rejectCall,
   endCall,
@@ -42,12 +38,9 @@ function CallModal({
   // Find remote user details
   const remoteUserDetails = remoteUser
     ? [...allContacts, ...chats].find((u) => u._id === remoteUser._id)
-    : incomingCallData
-      ? [...allContacts, ...chats].find((u) => u._id === incomingCallData.from)
-      : null;
-
-  // Hide modal when idle
-  if (isIdle) return null;
+      : incomingCallData
+        ? [...allContacts, ...chats].find((u) => u._id === incomingCallData.from)
+        : null;
 
   // Handle drag for local video
   const handleLocalVideoMouseDown = (e) => {
@@ -81,6 +74,8 @@ function CallModal({
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging]);
+
+  if (isIdle) return null;
 
   // Outgoing call - CALLING state
   if (isCalling) {

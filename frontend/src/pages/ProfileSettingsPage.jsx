@@ -21,7 +21,6 @@ function ProfileSettingsPage() {
   const navigate = useNavigate();
 
   // Avatar state
-  const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -58,7 +57,6 @@ function ProfileSettingsPage() {
       return;
     }
 
-    setSelectedImage(file);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
@@ -67,12 +65,10 @@ function ProfileSettingsPage() {
   const handleSavePhoto = async () => {
     if (!imagePreview) return;
     await updateProfile({ profilePic: imagePreview });
-    setSelectedImage(null);
     setImagePreview(null);
   };
 
   const handleCancelPhoto = () => {
-    setSelectedImage(null);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };

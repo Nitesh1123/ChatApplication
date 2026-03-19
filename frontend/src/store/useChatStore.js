@@ -32,7 +32,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   setActiveTab: (tab) => set({ activeTab: tab }),
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setSelectedUser: (selectedUser) => set({ selectedUser, replyingTo: null }),
   setIsTyping: (value) => set({ isTyping: value }),
   setReplyingTo: (message) => set({ replyingTo: message }),
   clearReplyingTo: () => set({ replyingTo: null }),
@@ -78,7 +78,7 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  getMessagesByUserId: async (userId) => {
+  getMessages: async (userId) => {
     set({ isMessagesLoading: true });
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
@@ -88,6 +88,10 @@ export const useChatStore = create((set, get) => ({
     } finally {
       set({ isMessagesLoading: false });
     }
+  },
+
+  getMessagesByUserId: async (userId) => {
+    await get().getMessages(userId);
   },
 
   sendMessage: async (messageData) => {
@@ -124,10 +128,12 @@ export const useChatStore = create((set, get) => ({
         },
       }));
       get().clearReplyingTo();
+      return true;
     } catch (error) {
       // remove optimistic message on failure
       set({ messages: messages });
       toast.error(error.response?.data?.message || "Something went wrong");
+      return false;
     }
   },
 
