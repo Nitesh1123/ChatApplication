@@ -1,5 +1,6 @@
 import express from "express";
 import cookieParser from "cookie-parser";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
@@ -10,6 +11,13 @@ import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
 import { app, server } from "./lib/socket.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+console.log("=== STARTUP PATHS ===");
+console.log("process.cwd():", process.cwd());
+console.log("__dirname:", __dirname);
 
 const PORT = process.env.PORT || 3000;
 
@@ -69,24 +77,40 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-console.log("dirname:", __dirname);
-console.log("Frontend dist path:", path.join(__dirname, "../../frontend/dist"));
-
 if (process.env.NODE_ENV === "production") {
-  const frontendDistPath = path.join(__dirname, "../../frontend/dist");
+  // Try multiple possible paths and use whichever exists
+  const possiblePaths = [
+    path.join(__dirname, "../../frontend/dist"),
+    path.join(__dirname, "../../../frontend/dist"),
+    path.join(process.cwd(), "frontend/dist"),
+    path.join(process.cwd(), "../frontend/dist"),
+  ];
 
-  console.log("Serving static files from:", frontendDistPath);
+  let frontendDistPath = null;
 
-  app.use(express.static(frontendDistPath));
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      frontendDistPath = p;
+      console.log("✅ Found frontend dist at:", p);
+      break;
+    } else {
+      console.log("❌ Not found at:", p);
+    }
+  }
 
-  app.get("*", (req, res) => {
-    const indexPath = path.join(frontendDistPath, "index.html");
-    console.log("Serving index.html from:", indexPath);
-    res.sendFile(indexPath);
-  });
+  if (frontendDistPath) {
+    app.use(express.static(frontendDistPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(frontendDistPath, "index.html"));
+    });
+  } else {
+    console.error("❌ Could not find frontend/dist in any expected location");
+    console.log("Current working directory:", process.cwd());
+    console.log("__dirname:", __dirname);
+    app.get("*", (req, res) => {
+      res.status(404).send("Frontend build not found");
+    });
+  }
 }
 
 server.on("error", (error) => {
