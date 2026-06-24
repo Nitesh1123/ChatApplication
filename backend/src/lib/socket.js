@@ -6,9 +6,15 @@ import { socketAuthMiddleware } from "../middleware/socket.auth.middleware.js";
 const app = express();
 const server = http.createServer(app);
 
+// Whitelist allowed origins for Socket.io CORS
+const allowedOrigins = [
+  process.env.CLIENT_URL || "http://localhost:5173",
+  ...(process.env.PRODUCTION_CLIENT_URL ? [process.env.PRODUCTION_CLIENT_URL] : []),
+];
+
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST"],
   },

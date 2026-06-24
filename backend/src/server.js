@@ -23,9 +23,22 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "10mb" })); // req.body
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Whitelist allowed origins for CORS
+const allowedOrigins = [
+  process.env.CLIENT_URL || "http://localhost:5173",
+  ...(process.env.PRODUCTION_CLIENT_URL ? [process.env.PRODUCTION_CLIENT_URL] : []),
+];
+
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
@@ -39,7 +52,16 @@ if (process.env.NODE_ENV === "development") {
 }
 app.use(cookieParser());
 
-app.options("*", cors({ origin: true, credentials: true }));
+app.options("*", cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}));
 
 app.get("/health", (req, res) => {
   res.status(200).json({
